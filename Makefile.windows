@@ -1,0 +1,179 @@
+# NexusLink (NLink) Makefile - Windows Compatible Version
+# Author: Nnamdi Michael Okpala
+# Modified for Windows compatibility
+
+CC = gcc
+CFLAGS = -Wall -Wextra -Wno-unused-parameter -g -fPIC -Iinclude
+LDFLAGS = -shared -ldl -lpthread
+
+# Directories (using Windows-style paths)
+SRC_DIR = src
+INCLUDE_DIR = include
+BUILD_DIR = build
+LIB_DIR = lib
+BIN_DIR = bin
+TEST_DIR = test
+
+# Component directories
+CORE_DIR = $(SRC_DIR)\core
+COMMON_DIR = $(CORE_DIR)\common
+SYMBOLS_DIR = $(CORE_DIR)\symbols
+VERSIONING_DIR = $(CORE_DIR)\versioning
+MINIMIZER_DIR = $(CORE_DIR)\minimizer
+AUTOMATON_DIR = $(CORE_DIR)\automaton
+CLI_DIR = $(SRC_DIR)\cli
+
+# Source files
+CORE_SRCS = $(wildcard $(CORE_DIR)\*.c)
+COMMON_SRCS = $(wildcard $(COMMON_DIR)\*.c)
+SYMBOLS_SRCS = $(wildcard $(SYMBOLS_DIR)\*.c)
+VERSIONING_SRCS = $(wildcard $(VERSIONING_DIR)\*.c)
+MINIMIZER_SRCS = $(wildcard $(MINIMIZER_DIR)\*.c) $(wildcard $(AUTOMATON_DIR)\*.c)
+CLI_SRCS = $(wildcard $(CLI_DIR)\*.c) $(wildcard $(CLI_DIR)\commands\*.c)
+
+# Object files
+CORE_OBJS = $(patsubst $(CORE_DIR)\%.c,$(BUILD_DIR)\core\%.o,$(CORE_SRCS))
+COMMON_OBJS = $(patsubst $(COMMON_DIR)\%.c,$(BUILD_DIR)\core\common\%.o,$(COMMON_SRCS))
+SYMBOLS_OBJS = $(patsubst $(SYMBOLS_DIR)\%.c,$(BUILD_DIR)\core\symbols\%.o,$(SYMBOLS_SRCS))
+VERSIONING_OBJS = $(patsubst $(VERSIONING_DIR)\%.c,$(BUILD_DIR)\core\versioning\%.o,$(VERSIONING_SRCS))
+MINIMIZER_OBJS = $(patsubst $(MINIMIZER_DIR)\%.c,$(BUILD_DIR)\core\minimizer\%.o,$(wildcard $(MINIMIZER_DIR)\*.c)) \
+				$(patsubst $(AUTOMATON_DIR)\%.c,$(BUILD_DIR)\core\automaton\%.o,$(wildcard $(AUTOMATON_DIR)\*.c))
+CLI_OBJS = $(patsubst $(CLI_DIR)\%.c,$(BUILD_DIR)\cli\%.o,$(CLI_SRCS))
+
+# Split minimizer sources by prefix
+MINIMIZER_SRCS = $(wildcard $(MINIMIZER_DIR)\nexus_*.c)
+OKPALA_SRCS = $(wildcard $(MINIMIZER_DIR)\okpala_*.c)
+AUTOMATON_SRCS = $(wildcard $(AUTOMATON_DIR)\*.c)
+
+# Generate object files for each source group
+MINIMIZER_OBJS = $(patsubst $(MINIMIZER_DIR)\%.c,$(BUILD_DIR)\core\minimizer\%.o,$(MINIMIZER_SRCS))
+OKPALA_OBJS = $(patsubst $(MINIMIZER_DIR)\%.c,$(BUILD_DIR)\core\minimizer\%.o,$(OKPALA_SRCS))
+AUTOMATON_OBJS = $(patsubst $(AUTOMATON_DIR)\%.c,$(BUILD_DIR)\core\automaton\%.o,$(AUTOMATON_SRCS))
+
+# Combined objects for the minimizer library
+ALL_MINIMIZER_OBJS = $(MINIMIZER_OBJS) $(OKPALA_OBJS) $(AUTOMATON_OBJS)
+
+# Library names
+NLINK_LIB = $(LIB_DIR)\libnlink.dll
+CORE_LIB = $(LIB_DIR)\libnexus_core.dll
+COMMON_LIB = $(LIB_DIR)\libnexus_common.dll
+SYMBOLS_LIB = $(LIB_DIR)\libnexus_symbols.dll
+VERSIONING_LIB = $(LIB_DIR)\libnexus_versioning.dll
+MINIMIZER_LIB = $(LIB_DIR)\libnexus_minimizer.dll
+CLI_LIB = $(LIB_DIR)\libnexus_cli.dll
+
+# Executable
+NLINK_BIN = $(BIN_DIR)\nlink.exe
+
+# Default target
+all: directories $(COMMON_LIB) $(SYMBOLS_LIB) $(VERSIONING_LIB) $(MINIMIZER_LIB) $(CORE_LIB) $(CLI_LIB) $(NLINK_LIB) $(NLINK_BIN)
+
+directories:
+	if not exist $(BUILD_DIR)\core mkdir $(BUILD_DIR)\core
+	if not exist $(BUILD_DIR)\core\common mkdir $(BUILD_DIR)\core\common
+	if not exist $(BUILD_DIR)\core\symbols mkdir $(BUILD_DIR)\core\symbols
+	if not exist $(BUILD_DIR)\core\versioning mkdir $(BUILD_DIR)\core\versioning
+	if not exist $(BUILD_DIR)\core\minimizer mkdir $(BUILD_DIR)\core\minimizer
+	if not exist $(BUILD_DIR)\core\automaton mkdir $(BUILD_DIR)\core\automaton
+	if not exist $(BUILD_DIR)\cli mkdir $(BUILD_DIR)\cli
+	if not exist $(BUILD_DIR)\cli\commands mkdir $(BUILD_DIR)\cli\commands
+	if not exist $(LIB_DIR) mkdir $(LIB_DIR)
+	if not exist $(BIN_DIR) mkdir $(BIN_DIR)
+
+# Compile core sources
+$(BUILD_DIR)\core\%.o: $(CORE_DIR)\%.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Compile common sources
+$(BUILD_DIR)\core\common\%.o: $(COMMON_DIR)\%.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Compile symbols sources
+$(BUILD_DIR)\core\symbols\%.o: $(SYMBOLS_DIR)\%.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Compile versioning sources
+$(BUILD_DIR)\core\versioning\%.o: $(VERSIONING_DIR)\%.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Compile minimizer sources
+$(BUILD_DIR)\core\minimizer\%.o: $(MINIMIZER_DIR)\%.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Compile automaton sources
+$(BUILD_DIR)\core\automaton\%.o: $(AUTOMATON_DIR)\%.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Compile CLI sources
+$(BUILD_DIR)\cli\%.o: $(CLI_DIR)\%.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Compile CLI command sources
+$(BUILD_DIR)\cli\commands\%.o: $(CLI_DIR)\commands\%.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Link common library
+$(COMMON_LIB): $(COMMON_OBJS)
+	$(CC) -shared -Wl,--out-implib,$(LIB_DIR)\libnexus_common.a $^ -o $@ -ldl -lpthread
+
+# Link symbols library
+$(SYMBOLS_LIB): $(SYMBOLS_OBJS) $(COMMON_LIB)
+	$(CC) -shared -Wl,--out-implib,$(LIB_DIR)\libnexus_symbols.a $^ -o $@ -ldl -lpthread
+
+# Link versioning library
+$(VERSIONING_LIB): $(VERSIONING_OBJS) $(COMMON_LIB)
+	$(CC) -shared -Wl,--out-implib,$(LIB_DIR)\libnexus_versioning.a $^ -o $@ -ldl -lpthread
+
+# Link minimizer library
+$(MINIMIZER_LIB): $(MINIMIZER_OBJS) $(COMMON_LIB)
+	$(CC) -shared -Wl,--out-implib,$(LIB_DIR)\libnexus_minimizer.a $^ -o $@ -ldl -lpthread
+
+# Link core library
+$(CORE_LIB): $(CORE_OBJS) $(COMMON_LIB) $(SYMBOLS_LIB) $(VERSIONING_LIB) $(MINIMIZER_LIB)
+	$(CC) -shared -Wl,--out-implib,$(LIB_DIR)\libnexus_core.a $^ -o $@ -ldl -lpthread
+
+# Link CLI library
+$(CLI_LIB): $(CLI_OBJS) $(CORE_LIB)
+	$(CC) -shared -Wl,--out-implib,$(LIB_DIR)\libnexus_cli.a $^ -o $@ -ldl -lpthread
+
+# Link main library
+$(NLINK_LIB): $(CORE_LIB) $(COMMON_LIB) $(SYMBOLS_LIB) $(VERSIONING_LIB) $(MINIMIZER_LIB) $(CLI_LIB)
+	$(CC) -shared -Wl,--out-implib,$(LIB_DIR)\libnlink.a -Wl,--whole-archive $^ -Wl,--no-whole-archive -o $@ -ldl -lpthread
+
+# Build executable
+$(NLINK_BIN): $(CLI_DIR)\main.c $(NLINK_LIB)
+	$(CC) $(CFLAGS) $< -o $@ -L$(LIB_DIR) -lnlink -Wl,-rpath,$(LIB_DIR)
+
+# Clean build artifacts
+clean:
+	if exist $(BUILD_DIR) rmdir /s /q $(BUILD_DIR)
+	if exist $(LIB_DIR) rmdir /s /q $(LIB_DIR)
+	if exist $(BIN_DIR) rmdir /s /q $(BIN_DIR)
+
+# Run tests
+test: all
+	@echo "Running tests..."
+	@cd $(TEST_DIR) && run_tests.bat
+
+# Install libraries and headers
+install: all
+	@echo "Installing NexusLink..."
+	@if not exist "C:\Program Files\NexusLink" mkdir "C:\Program Files\NexusLink"
+	@if not exist "C:\Program Files\NexusLink\bin" mkdir "C:\Program Files\NexusLink\bin"
+	@if not exist "C:\Program Files\NexusLink\lib" mkdir "C:\Program Files\NexusLink\lib"
+	@if not exist "C:\Program Files\NexusLink\include" mkdir "C:\Program Files\NexusLink\include"
+	@copy $(BIN_DIR)\*.exe "C:\Program Files\NexusLink\bin\"
+	@copy $(LIB_DIR)\*.dll "C:\Program Files\NexusLink\lib\"
+	@copy $(LIB_DIR)\*.a "C:\Program Files\NexusLink\lib\"
+	@xcopy /s /i $(INCLUDE_DIR)\* "C:\Program Files\NexusLink\include\"
+
+# Show help
+help:
+	@echo "NexusLink Makefile targets:"
+	@echo "  all         - Build all libraries and executable (default)"
+	@echo "  clean       - Remove all build artifacts"
+	@echo "  test        - Run tests"
+	@echo "  install     - Install libraries and headers"
+	@echo "  help        - Show this help message"
+
+.PHONY: all directories clean test install help
