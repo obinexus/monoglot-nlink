@@ -1,17 +1,33 @@
-# NexusLink (NLink) Makefile
+# ============================================================================
+# NexusLink (NLink) Makefile - Unix/Linux/macOS Edition
 # Author: Nnamdi Michael Okpala
+# Platform: Unix-like systems (Linux, macOS, WSL, BSD)
+# ============================================================================
 
+# Detect platform
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
+    PLATFORM = macos
+    LIB_EXT = .dylib
+    PLATFORM_CFLAGS = -DNLINK_MACOS
+else
+    PLATFORM = linux
+    LIB_EXT = .so
+    PLATFORM_CFLAGS = -DNLINK_LINUX
+endif
+
+# Compiler Configuration
 CC = gcc
-CFLAGS = -Wall -Wextra -Wno-unused-parameter -g -fPIC -Iinclude
-LDFLAGS = -shared -ldl -lpthread
+CFLAGS = -Wall -Wextra -Wno-unused-parameter -g -fPIC -Iinclude $(PLATFORM_CFLAGS)
+LDFLAGS = -shared
+LDLIBS = -lpthread -ldl
 
-# Directories
+# Directories (Unix style with forward slashes)
 SRC_DIR = src
 INCLUDE_DIR = include
 BUILD_DIR = build
 LIB_DIR = lib
 BIN_DIR = bin
-TEST_DIR = test
 
 # Component directories
 CORE_DIR = $(SRC_DIR)/core
@@ -21,151 +37,221 @@ VERSIONING_DIR = $(CORE_DIR)/versioning
 MINIMIZER_DIR = $(CORE_DIR)/minimizer
 AUTOMATON_DIR = $(CORE_DIR)/automaton
 CLI_DIR = $(SRC_DIR)/cli
+COMMANDS_DIR = $(CLI_DIR)/commands
+
 # Source files
-CORE_SRCS = $(wildcard $(CORE_DIR)/*.c)
 COMMON_SRCS = $(wildcard $(COMMON_DIR)/*.c)
 SYMBOLS_SRCS = $(wildcard $(SYMBOLS_DIR)/*.c)
 VERSIONING_SRCS = $(wildcard $(VERSIONING_DIR)/*.c)
-MINIMIZER_SRCS = $(wildcard $(MINIMIZER_DIR)/*.c) $(wildcard $(AUTOMATON_DIR)/*.c)
-CLI_SRCS = $(wildcard $(CLI_DIR)/*.c) $(wildcard $(CLI_DIR)/commands/*.c)
+MINIMIZER_SRCS = $(wildcard $(MINIMIZER_DIR)/nexus_*.c) $(wildcard $(MINIMIZER_DIR)/okpala_*.c)
+AUTOMATON_SRCS = $(wildcard $(AUTOMATON_DIR)/*.c)
+CORE_SRCS = $(wildcard $(CORE_DIR)/*.c)
+CLI_SRCS = $(wildcard $(CLI_DIR)/*.c)
+COMMAND_SRCS = $(wildcard $(COMMANDS_DIR)/*.c)
+
 # Object files
-CORE_OBJS = $(patsubst $(CORE_DIR)/%.c,$(BUILD_DIR)/core/%.o,$(CORE_SRCS))
 COMMON_OBJS = $(patsubst $(COMMON_DIR)/%.c,$(BUILD_DIR)/core/common/%.o,$(COMMON_SRCS))
 SYMBOLS_OBJS = $(patsubst $(SYMBOLS_DIR)/%.c,$(BUILD_DIR)/core/symbols/%.o,$(SYMBOLS_SRCS))
 VERSIONING_OBJS = $(patsubst $(VERSIONING_DIR)/%.c,$(BUILD_DIR)/core/versioning/%.o,$(VERSIONING_SRCS))
-MINIMIZER_OBJS = $(patsubst $(MINIMIZER_DIR)/%.c,$(BUILD_DIR)/core/minimizer/%.o,$(wildcard $(MINIMIZER_DIR)/*.c)) \
-				$(patsubst $(AUTOMATON_DIR)/%.c,$(BUILD_DIR)/core/automaton/%.o,$(wildcard $(AUTOMATON_DIR)/*.c))
-CLI_OBJS = $(patsubst $(CLI_DIR)/%.c,$(BUILD_DIR)/cli/%.o,$(CLI_SRCS))
-CLI_OBJS = $(patsubst $(CLI_DIR)/%.c,$(BUILD_DIR)/cli/%.o,$(CLI_SRCS))
-# Split minimizer sources by prefix
-MINIMIZER_SRCS = $(wildcard $(MINIMIZER_DIR)/nexus_*.c)
-OKPALA_SRCS = $(wildcard $(MINIMIZER_DIR)/okpala_*.c)
-AUTOMATON_SRCS = $(wildcard $(AUTOMATON_DIR)/*.c)
-
-# Generate object files for each source group
 MINIMIZER_OBJS = $(patsubst $(MINIMIZER_DIR)/%.c,$(BUILD_DIR)/core/minimizer/%.o,$(MINIMIZER_SRCS))
-OKPALA_OBJS = $(patsubst $(MINIMIZER_DIR)/%.c,$(BUILD_DIR)/core/minimizer/%.o,$(OKPALA_SRCS))
 AUTOMATON_OBJS = $(patsubst $(AUTOMATON_DIR)/%.c,$(BUILD_DIR)/core/automaton/%.o,$(AUTOMATON_SRCS))
+CORE_OBJS = $(patsubst $(CORE_DIR)/%.c,$(BUILD_DIR)/core/%.o,$(CORE_SRCS))
+CLI_OBJS = $(patsubst $(CLI_DIR)/%.c,$(BUILD_DIR)/cli/%.o,$(CLI_SRCS))
+COMMAND_OBJS = $(patsubst $(COMMANDS_DIR)/%.c,$(BUILD_DIR)/cli/commands/%.o,$(COMMAND_SRCS))
 
-# Combined objects for the minimizer library
-ALL_MINIMIZER_OBJS = $(MINIMIZER_OBJS) $(OKPALA_OBJS) $(AUTOMATON_OBJS)
 # Library names
-NLINK_LIB = $(LIB_DIR)/libnlink.so
-CORE_LIB = $(LIB_DIR)/libnexus_core.so
-COMMON_LIB = $(LIB_DIR)/libnexus_common.so
-SYMBOLS_LIB = $(LIB_DIR)/libnexus_symbols.so
-VERSIONING_LIB = $(LIB_DIR)/libnexus_versioning.so
-MINIMIZER_LIB = $(LIB_DIR)/libnexus_minimizer.so
-CLI_LIB = $(LIB_DIR)/libnexus_cli.so
+COMMON_LIB = $(LIB_DIR)/libnexus_common$(LIB_EXT)
+SYMBOLS_LIB = $(LIB_DIR)/libnexus_symbols$(LIB_EXT)
+VERSIONING_LIB = $(LIB_DIR)/libnexus_versioning$(LIB_EXT)
+MINIMIZER_LIB = $(LIB_DIR)/libnexus_minimizer$(LIB_EXT)
+CORE_LIB = $(LIB_DIR)/libnexus_core$(LIB_EXT)
+CLI_LIB = $(LIB_DIR)/libnexus_cli$(LIB_EXT)
+NLINK_LIB = $(LIB_DIR)/libnlink$(LIB_EXT)
 
 # Executable
 NLINK_BIN = $(BIN_DIR)/nlink
 
-# Default target
+# ============================================================================
+# Colors for output (because we're fancy like that)
+# ============================================================================
+RED = \033[0;31m
+GREEN = \033[0;32m
+YELLOW = \033[0;33m
+BLUE = \033[0;34m
+MAGENTA = \033[0;35m
+CYAN = \033[0;36m
+RESET = \033[0m
+
+# ============================================================================
+# Default Target
+# ============================================================================
 all: directories $(COMMON_LIB) $(SYMBOLS_LIB) $(VERSIONING_LIB) $(MINIMIZER_LIB) $(CORE_LIB) $(CLI_LIB) $(NLINK_LIB) $(NLINK_BIN)
+	@echo ""
+	@echo "$(GREEN)============================================$(RESET)"
+	@echo "$(CYAN)?? NLink Build Complete ($(PLATFORM))$(RESET)"
+	@echo "$(GREEN)============================================$(RESET)"
+	@echo "$(YELLOW)Binary:$(RESET) $(NLINK_BIN)"
+	@echo "$(YELLOW)Libraries:$(RESET) $(LIB_DIR)/*$(LIB_EXT)"
+	@echo ""
+	@echo "$(MAGENTA)?? Quick Start:$(RESET)"
+	@echo "  ./$(NLINK_BIN) --version"
+	@echo "  ./$(NLINK_BIN) --help"
+	@echo "$(GREEN)============================================$(RESET)"
+
+# ============================================================================
+# Directory Setup
+# ============================================================================
 directories:
-	mkdir -p $(BUILD_DIR)/core
-	mkdir -p $(BUILD_DIR)/core
-	mkdir -p $(BUILD_DIR)/core/common
-	mkdir -p $(BUILD_DIR)/core/symbols
-	mkdir -p $(BUILD_DIR)/core/versioning
-	mkdir -p $(BUILD_DIR)/core/minimizer
-	mkdir -p $(BUILD_DIR)/core/automaton
-	mkdir -p $(BUILD_DIR)/cli
-	mkdir -p $(BUILD_DIR)/cli/commands
-	mkdir -p $(LIB_DIR)
-	mkdir -p $(BIN_DIR)
-	
-# Compile core sources
-$(BUILD_DIR)/core/%.o: $(CORE_DIR)/%.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	@mkdir -p $(BUILD_DIR)/core
+	@mkdir -p $(BUILD_DIR)/core/common
+	@mkdir -p $(BUILD_DIR)/core/symbols
+	@mkdir -p $(BUILD_DIR)/core/versioning
+	@mkdir -p $(BUILD_DIR)/core/minimizer
+	@mkdir -p $(BUILD_DIR)/core/automaton
+	@mkdir -p $(BUILD_DIR)/cli
+	@mkdir -p $(BUILD_DIR)/cli/commands
+	@mkdir -p $(LIB_DIR)
+	@mkdir -p $(BIN_DIR)
 
-# Compile common sources
+# ============================================================================
+# Compilation Rules
+# ============================================================================
+
+# Common sources
 $(BUILD_DIR)/core/common/%.o: $(COMMON_DIR)/%.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	@echo "$(CYAN)[CC]$(RESET) $<"
+	@$(CC) $(CFLAGS) -c $< -o $@
 
-# Compile symbols sources
+# Symbols sources
 $(BUILD_DIR)/core/symbols/%.o: $(SYMBOLS_DIR)/%.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	@echo "$(CYAN)[CC]$(RESET) $<"
+	@$(CC) $(CFLAGS) -c $< -o $@
 
-# Compile versioning sources
-# Compile minimizer sources
+# Versioning sources
+$(BUILD_DIR)/core/versioning/%.o: $(VERSIONING_DIR)/%.c
+	@echo "$(CYAN)[CC]$(RESET) $<"
+	@$(CC) $(CFLAGS) -c $< -o $@
+
+# Minimizer sources (Okpala Algorithm ??)
 $(BUILD_DIR)/core/minimizer/%.o: $(MINIMIZER_DIR)/%.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	@echo "$(CYAN)[CC]$(RESET) $<"
+	@$(CC) $(CFLAGS) -c $< -o $@
 
-# Compile automaton sources
+# Automaton sources
 $(BUILD_DIR)/core/automaton/%.o: $(AUTOMATON_DIR)/%.c
-	$(CC) $(CFLAGS) -c $< -o $@
-# Compile minimizer sources
-$(BUILD_DIR)/core/minimizer/%.o: $(MINIMIZER_DIR)/%.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	@echo "$(CYAN)[CC]$(RESET) $<"
+	@$(CC) $(CFLAGS) -c $< -o $@
 
-# Compile CLI sources
+# Core sources
+$(BUILD_DIR)/core/%.o: $(CORE_DIR)/%.c
+	@echo "$(CYAN)[CC]$(RESET) $<"
+	@$(CC) $(CFLAGS) -c $< -o $@
+
+# CLI sources
 $(BUILD_DIR)/cli/%.o: $(CLI_DIR)/%.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	@echo "$(CYAN)[CC]$(RESET) $<"
+	@$(CC) $(CFLAGS) -c $< -o $@
 
-# Compile CLI command sources
-$(BUILD_DIR)/cli/commands/%.o: $(CLI_DIR)/commands/%.c
-	$(CC) $(CFLAGS) -c $< -o $@
+# Command sources
+$(BUILD_DIR)/cli/commands/%.o: $(COMMANDS_DIR)/%.c
+	@echo "$(CYAN)[CC]$(RESET) $<"
+	@$(CC) $(CFLAGS) -c $< -o $@
 
-# Link common library
+# ============================================================================
+# Library Linking
+# ============================================================================
+
+# 1. Common Library (Foundation)
 $(COMMON_LIB): $(COMMON_OBJS)
-	$(CC) $(LDFLAGS) $^ -o $@
+	@echo "$(GREEN)[LD]$(RESET) $@"
+	@$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 
-# Link symbols library
+# 2. Symbols Library
 $(SYMBOLS_LIB): $(SYMBOLS_OBJS) $(COMMON_LIB)
-	$(CC) $(LDFLAGS) $^ -o $@
+	@echo "$(GREEN)[LD]$(RESET) $@"
+	@$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 
-# Link versioning library
+# 3. Versioning Library (SemVer-X)
 $(VERSIONING_LIB): $(VERSIONING_OBJS) $(COMMON_LIB)
-	$(CC) $(LDFLAGS) $^ -o $@
+	@echo "$(GREEN)[LD]$(RESET) $@"
+	@$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 
-# Link minimizer library
-$(MINIMIZER_LIB): $(MINIMIZER_OBJS) $(COMMON_LIB)
-	$(CC) $(LDFLAGS) $^ -o $@
+# 4. Minimizer Library (The Secret Sauce ??)
+$(MINIMIZER_LIB): $(MINIMIZER_OBJS) $(AUTOMATON_OBJS) $(COMMON_LIB)
+	@echo "$(GREEN)[LD]$(RESET) $@"
+	@$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 
-# Link core library
+# 5. Core Library
 $(CORE_LIB): $(CORE_OBJS) $(COMMON_LIB) $(SYMBOLS_LIB) $(VERSIONING_LIB) $(MINIMIZER_LIB)
-	$(CC) $(LDFLAGS) $^ -o $@
+	@echo "$(GREEN)[LD]$(RESET) $@"
+	@$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 
-# Link CLI library
-$(CLI_LIB): $(CLI_OBJS) $(CORE_LIB)
-	$(CC) $(LDFLAGS) $^ -o $@
+# 6. CLI Library
+$(CLI_LIB): $(CLI_OBJS) $(COMMAND_OBJS) $(CORE_LIB)
+	@echo "$(GREEN)[LD]$(RESET) $@"
+	@$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 
-# Link main library
+# 7. Main NLink Library
 $(NLINK_LIB): $(CORE_LIB) $(COMMON_LIB) $(SYMBOLS_LIB) $(VERSIONING_LIB) $(MINIMIZER_LIB) $(CLI_LIB)
-	$(CC) $(LDFLAGS) -Wl,--whole-archive $^ -Wl,--no-whole-archive -o $@
+	@echo "$(GREEN)[LD]$(RESET) $@"
+	@$(CC) $(LDFLAGS) -Wl,--whole-archive $^ -Wl,--no-whole-archive -o $@ $(LDLIBS)
 
-# Build executable
+# ============================================================================
+# Executable Linking
+# ============================================================================
 $(NLINK_BIN): $(CLI_DIR)/main.c $(NLINK_LIB)
-	$(CC) $(CFLAGS) $< -o $@ -L$(LIB_DIR) -Wl,-rpath,$(LIB_DIR) -lnlink
+	@echo "$(MAGENTA)[LINK]$(RESET) $@"
+	@$(CC) $(CFLAGS) $< -o $@ -L$(LIB_DIR) -Wl,-rpath,$(LIB_DIR) -lnlink $(LDLIBS)
 
-# Clean build artifacts
+# ============================================================================
+# Utility Targets
+# ============================================================================
+
 clean:
-	rm -rf $(BUILD_DIR)
-	rm -rf $(LIB_DIR)
-	rm -rf $(BIN_DIR)
+	@rm -rf $(BUILD_DIR) $(LIB_DIR) $(BIN_DIR)
+	@echo "$(YELLOW)?? Build artifacts cleaned$(RESET)"
 
-# Run tests
+rebuild: clean all
+
 test: all
-	@echo "Running tests..."
-	@cd $(TEST_DIR) && ./run_tests.sh
+	@echo "$(CYAN)Running NLink test suite...$(RESET)"
+	@cd tests && ./run_tests.sh
 
-# Install libraries and headers
 install: all
-	mkdir -p /usr/local/lib/nexuslink
-	mkdir -p /usr/local/include/nexuslink
-	cp $(LIB_DIR)/*.so /usr/local/lib/nexuslink/
-	cp -r $(INCLUDE_DIR)/* /usr/local/include/nexuslink/
-	ldconfig
+	@echo "$(CYAN)Installing NexusLink...$(RESET)"
+	@mkdir -p /usr/local/lib/nexuslink
+	@mkdir -p /usr/local/include/nexuslink
+	@mkdir -p /usr/local/bin
+	@cp $(LIB_DIR)/*$(LIB_EXT) /usr/local/lib/nexuslink/
+	@cp -r $(INCLUDE_DIR)/* /usr/local/include/nexuslink/
+	@cp $(NLINK_BIN) /usr/local/bin/
+ifeq ($(PLATFORM),linux)
+	@ldconfig
+endif
+	@echo "$(GREEN)? Installation complete$(RESET)"
 
-# Show help
+uninstall:
+	@rm -rf /usr/local/lib/nexuslink
+	@rm -rf /usr/local/include/nexuslink
+	@rm -f /usr/local/bin/nlink
+	@echo "$(YELLOW)???  NLink uninstalled$(RESET)"
+
 help:
-	@echo "NexusLink Makefile targets:"
-	@echo "  all         - Build all libraries and executable (default)"
-	@echo "  clean       - Remove all build artifacts"
-	@echo "  test        - Run tests"
-	@echo "  install     - Install libraries and headers"
-	@echo "  help        - Show this help message"
+	@echo ""
+	@echo "$(GREEN)============================================$(RESET)"
+	@echo "$(CYAN)?? NLink Makefile ($(PLATFORM)) - Help$(RESET)"
+	@echo "$(GREEN)============================================$(RESET)"
+	@echo ""
+	@echo "$(YELLOW)Available targets:$(RESET)"
+	@echo "  $(CYAN)all$(RESET)       - Build everything (default)"
+	@echo "  $(CYAN)clean$(RESET)     - Remove build artifacts"
+	@echo "  $(CYAN)rebuild$(RESET)   - Clean then build"
+	@echo "  $(CYAN)test$(RESET)      - Run test suite"
+	@echo "  $(CYAN)install$(RESET)   - Install to /usr/local"
+	@echo "  $(CYAN)uninstall$(RESET) - Remove installation"
+	@echo "  $(CYAN)help$(RESET)      - Show this message"
+	@echo ""
+	@echo "$(MAGENTA)Build with:$(RESET) make -f Makefile.unix"
+	@echo ""
 
-.PHONY: all directories clean test install help
+.PHONY: all directories clean rebuild test install uninstall help
