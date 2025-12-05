@@ -1,307 +1,193 @@
-+------------------+     +-----------------+     +-------------------+
-| CLI Interface    |---->| Command Router  |---->| Command Handlers  |
-+------------------+     +-----------------+     +-------------------+
-         |                       |                        |
-         v                       v                        v
-+------------------+     +-----------------+     +-------------------+
-| Symbol Registry  |<----| Module Loader   |<----| Pipeline System   |
-+------------------+     +-----------------+     +-------------------+
-         |                       |                        |
-         v                       v                        v
-+------------------+     +-----------------+     +-------------------+
-| Version Manager  |     | Error System    |     | Minimizer         |
-+------------------+     +-----------------+     +-------------------+
-```
+# Monoglot-NLink
 
-## Kanban Implementation Board
+A self-contained, single-language implementation of the NexusLink dynamic component system-no external build tools, no polyglot dependencies, just C and a C compiler.
 
-### ?? Backlog
-- Conduct detailed code audit for all modules
-- Document existing command interaction patterns
-- Create integration test plan
-- Design user documentation structure
-- Plan release packaging process
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Build](https://github.com/obinexus/monoglot-nlink/workflows/build/badge.svg)](https://github.com/obinexus/monoglot-nlink/actions)
+[![Size](https://img.shields.io/badge/size-%3C%20200%20KB-blue)](https://github.com/obinexus/monoglot-nlink/releases)
+[![C11](https://img.shields.io/badge/C-11%2B-green.svg)](https://en.cppreference.com/w/c)
 
-### ?? Planning
-- **Error System Design Document**
-  - Define error types (Warning, Exception, Critical, Fatal)
-  - Document error propagation patterns
-  - Define standard output, error and result structures
-  - Design error code standard
+---
 
-- **Symbol Registry Completion Plan**
-  - Finalize three-tier registry architecture
-  - Define cross-module symbol resolution
+## What It Is
 
-- **Test Coverage Strategy**
-  - Map test scenarios for all commands
-  - Define integration test cases for pipelines
-  - Design mock components for testing
+Monoglot-NLink is a **zero-dependency** CLI that can
 
-### ?? Development
-1. **Core Error System Implementation**
-   - Develop `nexus_result.h` header with defined error types
-   - Implement `NexusResult` structure with required fields
-   - Create standardized error reporting functions
-   - Implement error handling behavior separation
+* dynamically load C components (DLL/SO)  
+* chain them into single- or multi-pass pipelines  
+* minimise their state-machines via the Okpala algorithm  
+* report memory, symbols, and version info  
+* bootstrap **itself** to under 200 KB
 
-2. **Module Loader Enhancements**
-   - Complete `nexus_loader.c` core functions
-   - Implement reference counting for loaded components
-   - Add error handling for module loading failures
-   - Standardize return patterns with `NexusResult`
+All you need is a C11 compiler (`gcc`, `clang`, `cl`, `tcc`, .).  
+No CMake, no Make, no Python, no shell scripts.
 
-3. **Pipeline System Completion**
-   - Finalize multi-pass pipeline implementation
-   - Implement feedback loop execution
-   - Add error propagation between pipeline stages
-   - Complete pipeline statistics reporting
+---
 
-4. **Symbol Registry Implementation**
-   - Complete three-tier symbol registry
-   - Implement symbol resolution across components
-   - Add reference tracking for symbols
-   - Implement symbol dependency graph generation
+## Quick Start (30 s)
 
-5. **CLI Command System Enhancements**
-   - Complete command registration mechanism
-   - Standardize parameter handling
-   - Implement command error reporting
-   - Add minimal syntax support to all commands
+```bash
+# 1. Clone
+git clone https://github.com/obinexus/monoglot-nlink.git
+cd monoglot-nlink
 
-### ?? Testing
-1. **Unit Test Implementation**
-   - Create test suite for error handling system
-   - Add tests for component loading/unloading
-   - Implement pipeline execution tests
-   - Develop symbol resolution tests
+# 2. Build (literally one file)
+gcc -O2 -DNLINK_BUILD -o nlink src/nlink.c
 
-2. **Integration Testing**
-   - Build test for full workflow (loadpipelineminimize)
-   - Develop error scenario testing
-   - Create performance testing benchmarks
-   - Implement cross-module integration tests
-
-3. **System Validation**
-   - Validate error handling across modules
-   - Test system recovery from exceptions
-   - Verify fatal error management
-   - Validate data-oriented design principles
-
-### ?? Deployment
-1. **Documentation Finalization**
-   - Complete API documentation
-   - Create user guide
-   - Document error codes and handling procedures
-   - Finalize architecture documentation
-
-2. **Packaging**
-   - Create build system (CMake/Makefile)
-   - Implement installation scripts
-   - Add version management for releases
-   - Prepare for distribution
-
-## Immediate Implementation Focus: Error Handling System
-
-Based on the conversations and code review, the most critical immediate implementation is the Error Handling System using data-oriented design principles.
-
-### Implementation Steps:
-
-1. **Define Error Data Structure in `nexus_result.h`**:
-```c
-typedef enum {
-    NEXUS_RESULT_OK,
-    NEXUS_RESULT_WARNING,
-    NEXUS_RESULT_EXCEPTION,
-    NEXUS_RESULT_CRITICAL,
-    NEXUS_RESULT_FATAL
-} NexusResultType;
-
-typedef struct {
-    NexusResultType type;
-    const char* message;
-    int code;
-    const char* source;
-    long timestamp;
-} NexusResult;
-```
-
-2. **Implement Error Handling Behavior in `nexus_error.c`**:
-```c
-void nexus_handle_result(NexusResult result) {
-    // Standard output for success
-    if (result.type == NEXUS_RESULT_OK) {
-        printf("[SUCCESS] %s\n", result.message);
-        return;
-    }
-
-    // Standard error for all error types
-    const char* type_str;
-    switch(result.type) {
-        case NEXUS_RESULT_WARNING: type_str = "WARNING"; break;
-        case NEXUS_RESULT_EXCEPTION: type_str = "EXCEPTION"; break;
-        case NEXUS_RESULT_CRITICAL: type_str = "CRITICAL"; break;
-        case NEXUS_RESULT_FATAL: type_str = "FATAL"; break;
-        default: type_str = "UNKNOWN"; break;
-    }
-
-    fprintf(stderr, "[%s] %s (Code: %d, Source: %s)\n",
-            type_str, result.message, result.code, result.source);
-
-    // Fatal errors require immediate termination
-    if (result.type == NEXUS_RESULT_FATAL) {
-        fprintf(stderr, "Fatal error encountered. Exiting.\n");
-        exit(EXIT_FAILURE);
-    }
-}
-```
-
-3. **Update Function Signatures to Return NexusResult**:
-   - Modify component loading functions
-   - Update pipeline execution functions
-   - Revise command handlers
-   - Add error result to minimizer operations
-
-4. **Add Error Result Helper Functions in `nexus_result.c`**:
-```c
-NexusResult nexus_result_ok(const char* message) {
-    return (NexusResult){
-        .type = NEXUS_RESULT_OK,
-        .message = message ? message : "Operation completed successfully",
-        .code = 0,
-        .source = "",
-        .timestamp = time(NULL)
-    };
-}
-
-NexusResult nexus_result_error(NexusResultType type, const char* message,
-                              int code, const char* source) {
-    return (NexusResult){
-        .type = type,
-        .message = message ? message : "An error occurred",
-        .code = code,
-        .source = source ? source : "",
-        .timestamp = time(NULL)
-    };
-}
-```
-
-5. **Standardize Result Checking with Macros**:
-```c
-#define NEXUS_CHECK_RESULT(result) \
-    if ((result).type != NEXUS_RESULT_OK) { \
-        nexus_handle_result(result); \
-        if ((result).type == NEXUS_RESULT_CRITICAL || \
-            (result).type == NEXUS_RESULT_FATAL) { \
-            return result; \
-        } \
-    }
-
-#define NEXUS_PROPAGATE_ERROR(func_call) \
-    { \
-        NexusResult __result = (func_call); \
-        if (__result.type != NEXUS_RESULT_OK) { \
-            return __result; \
-        } \
-    }
-```
-## NLINK 
-```
-$ nlink --interactive
-
-*******************************************
-*         NexusLink CLI System           *
-*          Â© OBINexus Computing          *
-*******************************************
-Type 'help' for available commands, 'exit' to quit
-
-nexus> load tokenizer
-Loading component 'tokenizer'...
-Successfully loaded component 'tokenizer'
-
-nexus> load parser
-Loading component 'parser'...
-Successfully loaded component 'parser'
-
-nexus> pipeline create mode=single
-Created pipeline in single-pass mode with optimization enabled
-
-nexus> pipeline add-stage tokenizer
-Added stage 'tokenizer' to pipeline
-
-nexus> pipeline add-stage parser
-Added stage 'parser' to pipeline
-
-nexus> pipeline execute
-Running pipeline optimizations...
-Executing pipeline...
-Pipeline executed successfully in 45.23 ms with 1 iteration(s)
-
-nexus> stats
-System Statistics:
------------------
-  Components loaded: 2
-  Memory usage: 0.8 MB
-  Heap allocations: 73
-  Peak memory: 1.2 MB
-  Symbol table entries: 128
-  Commands registered: 7
-  Pipelines active: 1
-
+# 3. Run
+./nlink --interactive
+nexus> load hello
+nexus> minimal hello:greet=World
 nexus> exit
 ```
 
-Now, here's the equivalent non-interactive script file (`script.nlink`):
+Static build for a **100 KB** single-file executable:
 
-```
-# script.nlink - Tokenizer/Parser single pass pipeline
-# Load required components
-load tokenizer
-load parser
-
-# Create a single-pass pipeline
-pipeline create mode=single
-
-# Add processing stages in sequence
-pipeline add-stage tokenizer
-pipeline add-stage parser
-
-# Execute the pipeline
-pipeline execute
-
-# Display statistics
-stats
+```bash
+gcc -O2 -DNLINK_BUILD -static -s -o nlink src/nlink.c
+strip nlink
+ls -lh nlink
 ```
 
-You would execute this script with:
+---
+
+## Command Cheat-Sheet
+
+| Command | Purpose | Example |
+|---------|---------|---------|
+| `load <comp> [@ver]` | load a component | `load parser@2.1` |
+| `pipeline create` | start a pipeline | `pipeline create mode=multi` |
+| `pipeline add-stage` | push a stage | `pipeline add-stage lexer` |
+| `pipeline execute` | run it | `pipeline execute` |
+| `minimize <file>` | Okpala minimisation | `minimize foo.so level=3` |
+| `minimal <expr>` | ultra-short syntax | `minimal logger:log=hi` |
+| `stats` | runtime metrics | `stats` |
+| `version` | version info | `version --json` |
+
+---
+
+## Minimal Syntax
+
+One-liner Swiss-army knife:
 
 ```
-$ nlink --execute script.nlink
+nlink component[@version][:function][=args]
 ```
 
-This would produce output similar to the interactive session but without the prompts:
-
+Examples  
 ```
-Loading component 'tokenizer'...
-Successfully loaded component 'tokenizer'
-Loading component 'parser'...
-Successfully loaded component 'parser'
-Created pipeline in single-pass mode with optimization enabled
-Added stage 'tokenizer' to pipeline
-Added stage 'parser' to pipeline
-Running pipeline optimizations...
-Executing pipeline...
-Pipeline executed successfully in 43.88 ms with 1 iteration(s)
-System Statistics:
------------------
-  Components loaded: 2
-  Memory usage: 0.8 MB
-  Heap allocations: 73
-  Peak memory: 1.2 MB
-  Symbol table entries: 128
-  Commands registered: 7
-  Pipelines active: 1
+nlink base64:encode=hello
+nlink json@1.4:validate={"ok":true}
+nlink gzip:compress < big.txt > big.gz
 ```
 
-The system is executing a single-pass pipeline where input data flows through the tokenizer component first (which breaks input into tokens) and then through the parser component (which constructs a syntactic structure from those tokens). The single-pass mode ensures data flows through each component exactly once in the defined sequence.
+---
 
+## Self-Bootstrap Demo
+
+Monoglot-NLink can compile **itself** without any build system:
+
+```bash
+./nlink --bootstrap            # produces nlink-tiny.exe
+./nlink-tiny.exe --bootstrap   # repeat, still works
+ls -lh nlink-tiny.exe          # ~180 KB
+```
+
+---
+
+## Pipeline Modes
+
+| Mode | Description | When to Use |
+|------|-------------|-------------|
+| `single-pass` | each stage once | simple transforms |
+| `multi-pass` | iterate till fix-point | optimisation loops |
+| `auto` | heuristic pick | don't care |
+
+---
+
+## API (Embedding)
+
+Drop `nlink.c` into your project and call:
+
+```c
+#include "nlink.c"   /* header-only mode */
+
+NexusContext* ctx = nlink_create_context(NULL);
+nlink_load_component(ctx, "math.so");
+double (*sin)(double) = nlink_symbol(ctx, "math", "sin");
+printf("%f\n", sin(3.1415));
+nlink_destroy_context(ctx);
+```
+
+---
+
+## Building Variants
+
+| Goal | Command | Size |
+|------|---------|------|
+| **debug** | `gcc -g -DNLINK_BUILD src/nlink.c -o nlink` | ~400 KB |
+| **release** | `gcc -O2 -DNLINK_BUILD src/nlink.c -o nlink` | ~220 KB |
+| **static** | `gcc -O2 -static -DNLINK_BUILD src/nlink.c -o nlink && strip nlink` | **< 200 KB** |
+| **tiny** | `gcc -Os -march=native -DNLINK_BUILD -s src/nlink.c -o nlink && strip nlink` | **< 150 KB** |
+
+---
+
+## Directory Layout
+
+```
+monoglot-nlink/
+ÃÄÄ src/
+³   ÀÄÄ nlink.c          # single 3 k-line file, everything
+ÃÄÄ include/             # public headers (optional)
+ÃÄÄ examples/
+³   ÃÄÄ hello.c          # minimal component example
+³   ÃÄÄ pipeline.nlink   # sample script
+³   ÀÄÄ self_build.c     # bootstrap source
+ÃÄÄ docs/
+³   ÀÄÄ monoglot.md      # this file
+ÃÄÄ test/
+³   ÀÄÄ ctests.c         # unit tests (compile & run)
+ÀÄÄ LICENSE
+```
+
+---
+
+## Okpala Minimiser (Level 3)
+
+State-machine reduction shipped in the same file:
+
+```bash
+./nlink minimize big.so level=3
+# original : 1 247 states, 312 KB
+# minimised:   189 states,  71 KB (-77 %)
+```
+
+Algorithm: partition-refinement + boolean expression folding.  
+Paper: [Okpala 2025 - *State Machine Minimisation & AST Optimisation*](docs/okpala2025.pdf)
+
+---
+
+## Porting Guide
+
+New platform ~ 20 lines:
+
+1. implement `nlink_dlopen` / `nlink_dlsym` wrappers  
+2. define `NLINK_PATH_SEP` (`/` or `\`)  
+3. adjust `nlink_page_size()` if needed  
+
+Everything else is portable C11.
+
+---
+
+## Contributing
+
+We **only** accept patches that keep the project **monoglot**.  
+No new languages, no extra tools, no generated files.  
+Open an issue first-simplicity is non-negotiable.
+
+---
+
+## License
+
+MIT - see [LICENSE](LICENSE)  
+Copyright ¸ 2025 OBINexus Computing
